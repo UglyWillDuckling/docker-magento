@@ -1,9 +1,9 @@
 FROM php:7.3-fpm-buster
-MAINTAINER Mark Shust <mark@shust.com>
+
+LABEL maintainer="vsedlar@aap-software.dev"
 
 RUN apt-get update && apt-get install -y \
   cron \
-  git \
   gzip \
   libbz2-dev \
   libfreetype6-dev \
@@ -88,11 +88,6 @@ RUN curl -sSLO https://github.com/mailhog/mhsendmail/releases/download/v0.2.0/mh
 RUN curl -sS https://getcomposer.org/installer | \
   php -- --version=1.9.0 --install-dir=/usr/local/bin --filename=composer
 
-RUN curl -s https://packages.blackfire.io/gpg.key | apt-key add - \
-  && echo "deb http://packages.blackfire.io/debian any main" | tee /etc/apt/sources.list.d/blackfire.list \
-  && apt-get update \
-  && apt-get install blackfire-agent blackfire-php
-
 RUN printf '* *\t* * *\tapp\t%s/usr/local/bin/php /var/www/html/update/cron.php\n' >> /etc/crontab \
   && printf '* *\t* * *\tapp\t%s/usr/local/bin/php /var/www/html/bin/magento cron:run\n' >> /etc/crontab \
   && printf '* *\t* * *\tapp\t%s/usr/local/bin/php /var/www/html/bin/magento setup:cron:run\n#\n' >> /etc/crontab
@@ -103,11 +98,10 @@ COPY conf/php-fpm.conf /usr/local/etc/
 COPY bin/cronstart /usr/local/bin/
 
 RUN mkdir -p /etc/nginx/html /var/www/html /sock \
-  && chown -R app:app /etc/nginx /var/www /usr/local/etc/php/conf.d /sock
+  && chown -R app:app /etc/nginx /var/www /usr/local/etc/php/conf.d /sock \
+  && mkdir -p /usr/local/etc/php-fpm.d/www.conf.d/
 
 USER app:app
-
-VOLUME /var/www
 
 WORKDIR /var/www/html
 
