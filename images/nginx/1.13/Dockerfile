@@ -1,15 +1,13 @@
 FROM nginx:1.13
-MAINTAINER Mark Shust <mark@shust.com>
+
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y git wget  gcc curl libnss3-tools openssl
 
 RUN groupadd -g 1000 app \
  && useradd -g 1000 -u 1000 -d /var/www -s /bin/bash app
 RUN touch /var/run/nginx.pid
 RUN mkdir /sock
-
-RUN apt-get update && apt-get install -y \
-  curl \
-  libnss3-tools \
-  openssl
 
 RUN mkdir /etc/nginx/certs \
   && echo -e "\n\n\n\n\n\n\n" | openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/nginx/certs/nginx.key -out /etc/nginx/certs/nginx.crt
@@ -20,10 +18,23 @@ RUN ( \
   )
 
 COPY ./conf/nginx.conf /etc/nginx/
-COPY ./conf/default.conf /etc/nginx/conf.d/
+COPY /./conf/default.conf /etc/nginx/conf.d/
 
 RUN mkdir -p /etc/nginx/html /var/www/html \
   && chown -R app:app /etc/nginx /var/www /var/cache/nginx /var/run/nginx.pid /sock
+
+### install brotli library
+
+RUN cd ~/ && wget https://nginx.org/download/nginx-1.13.12.tar.gz && tar -xzvf nginx-1.13.12.tar.gz
+RUN cd ~/ && git clone https://github.com/eustas/ngx_brotli.git
+RUN cd ~/ngx_brotli/ && git submodule update --init
+
+RUN apt-get install -y make libpcre3 libpcre3-dev zlib1g zlib1g-dev
+
+RUN cd ~/nginx-1.13.12 && ~/nginx-1.13.12/configure --with-compat --add-dynamic-module=../ngx_brotli && \
+    make modules  && \
+    cp objs/*.so /etc/nginx/modules
+
 
 EXPOSE 8443
 
